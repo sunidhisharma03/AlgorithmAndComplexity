@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import time
 import random
-from multiprocessing import Pool, cpu_count
+from multiprocessing import Pool, cpu_count, freeze_support
 
 def sequential_quicksort(arr):
     if len(arr) <= 1:
@@ -66,12 +66,13 @@ def measure_sorting_time(sort_func, arr, **kwargs):
     return time.time() - start_time
 
 def plot_complexity_comparison():
-    # Test different input sizes
-    sizes = np.linspace(800000, 10000000, 5, dtype=int)
+    # Test different input sizes (reduced for faster execution)
+    sizes = np.linspace(10000, 100000, 5, dtype=int)
     parallel_times = []
     sequential_times = []
     num_processes = cpu_count()  # Get number of CPU cores
     print(f"Running comparison using {num_processes} CPU cores...")
+    
     # Measure actual execution times
     for size in sizes:
         print(f"Testing size {size}")
@@ -114,3 +115,8 @@ def plot_complexity_comparison():
              bbox=dict(facecolor='white', alpha=0.8))
     
     plt.show()
+
+# Guard the multiprocessing code
+if __name__ == '__main__':
+    freeze_support()  # Required for Windows and macOS
+    plot_complexity_comparison()

@@ -56,13 +56,33 @@ def clique_backtracking(graph):
     return max_clique_size[0]
 
 
+# Dynamic Programming (Bitmasking) for Maximum Clique
+def clique_dynamic(graph):
+    n = len(graph)
+    dp = [0] * (1 << n)  # DP array storing clique size for each subset (bitmask)
+
+    # Iterate through all subsets
+    for mask in range(1, 1 << n):
+        subset = [i for i in range(n) if mask & (1 << i)]
+        if is_clique(graph, subset):
+            dp[mask] = len(subset)
+
+        # Try adding new elements to the subset
+        for j in range(n):
+            if mask & (1 << j):
+                dp[mask] = max(dp[mask], dp[mask ^ (1 << j)])
+
+    return max(dp)
+
+
 # Compare performance of different algorithms
 def plot_clique_performance():
-    num_vertices_list = [5, 10, 15, 18]  # Number of vertices to test
+    num_vertices_list = [5, 8, 10, 12]  # Number of vertices to test
     edge_probability = 0.5  # Probability of edge presence
 
     brute_times = []
     backtrack_times = []
+    dynamic_times = []
 
     for num_vertices in num_vertices_list:
         graph = generate_random_graph(num_vertices, edge_probability)
@@ -77,12 +97,18 @@ def plot_clique_performance():
         max_clique_backtrack = clique_backtracking(graph)
         backtrack_times.append(time.time() - start_time)
 
-        print(f"Vertices: {num_vertices}, Max Clique (Brute): {max_clique_brute}, Max Clique (Backtrack): {max_clique_backtrack}")
+        # Dynamic Programming
+        start_time = time.time()
+        max_clique_dynamic = clique_dynamic(graph)
+        dynamic_times.append(time.time() - start_time)
+
+        print(f"Vertices: {num_vertices}, Max Clique (Brute): {max_clique_brute}, Max Clique (Backtrack): {max_clique_backtrack}, Max Clique (Dynamic): {max_clique_dynamic}")
 
     # Plotting the time complexity
     plt.figure(figsize=(10, 6))
     plt.plot(num_vertices_list, brute_times, label="Brute Force Time", marker='o')
     plt.plot(num_vertices_list, backtrack_times, label="Backtracking Time", marker='o')
+    plt.plot(num_vertices_list, dynamic_times, label="Dynamic Programming Time", marker='o', linestyle="dashed")
     plt.xlabel("Number of Vertices")
     plt.ylabel("Time (seconds)")
     plt.title("Performance Comparison of Clique Problem")

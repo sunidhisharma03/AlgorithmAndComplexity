@@ -37,7 +37,7 @@ class Graph:
             parent.append(node)
             rank.append(0)
         while e < self.V - 1:
-            if i >= len(self.graph):  # Check if there are enough edges
+            if i >= len(self.graph):
                 print("Not enough edges to form a spanning tree.")
                 return result
             u, v, w = self.graph[i]
@@ -50,75 +50,85 @@ class Graph:
                 self.union(parent, rank, x, y)
         return result
 
-# Backtracking Approach for 0/1 Knapsack Problem
-def knapsack_backtracking(weights, values, capacity, n):
-    def backtrack(index, current_weight, current_value):
-        nonlocal max_value
-        if current_weight <= capacity and current_value > max_value:
-            max_value = current_value
-        if index == n or current_weight >= capacity:
-            return
-        # Include the current item
-        backtrack(index + 1, current_weight + weights[index], current_value + values[index])
-        # Exclude the current item
-        backtrack(index + 1, current_weight, current_value)
+# Generate a random graph
 
-    max_value = 0
-    backtrack(0, 0, 0)
-    return max_value
+def generate_random_graph(vertices, edges):
+    g = Graph(vertices)
+    for _ in range(edges):
+        u, v = random.sample(range(vertices), 2)
+        w = random.randint(1, 20)
+        g.addEdge(u, v, w)
+    return g
 
-# Brute Force Approach for 0/1 Knapsack Problem
-def knapsack_bruteforce(weights, values, capacity, n):
-    max_value = 0
-    # Generate all possible subsets
-    for i in range(2**n):
-        total_weight = 0
-        total_value = 0
-        for j in range(n):
-            if (i >> j) & 1:  # Check if the j-th item is included
-                total_weight += weights[j]
-                total_value += values[j]
-        if total_weight <= capacity and total_value > max_value:
-            max_value = total_value
-    return max_value
-
-# Function to generate random inputs for Knapsack Problem
-def generate_random_knapsack_input(n):
-    weights = [random.randint(1, 20) for _ in range(n)]
-    values = [random.randint(10, 50) for _ in range(n)]
-    capacity = random.randint(20, 50)
-    return weights, values, capacity
-
-# Function to measure time for Knapsack algorithms
-def measure_knapsack_time(algorithm, weights, values, capacity, n):
+# Measure execution time
+def measure_time(algorithm, graph):
     start_time = time.time()
-    algorithm(weights, values, capacity, n)
+    algorithm(graph)
     end_time = time.time()
     return end_time - start_time
 
-# Parameters for the time complexity graph
-n_list = range(1, 20)  # Number of items for Knapsack
+# Brute Force MST (Checking all subsets)
+def brute_force_mst(graph):
+    G = nx.Graph()
+    for edge in graph.graph:
+        G.add_edge(edge[0], edge[1], weight=edge[2])
+    
+    min_tree = None
+    min_weight = float('inf')
+    for edges in nx.connected_components(G):
+        subgraph = G.subgraph(edges)
+        weight = sum(nx.get_edge_attributes(subgraph, 'weight').values())
+        if len(subgraph.edges) == graph.V - 1 and weight < min_weight:
+            min_weight = weight
+            min_tree = subgraph.edges
+    return min_tree
 
-# Measure Backtracking and Brute Force times
-backtracking_times = []
+# Backtracking approach to find MST
+def backtracking_mst(graph):
+    mst = []
+    min_weight = [float('inf')]
+
+    def backtrack(index, current_tree, current_weight):
+        if len(current_tree) == graph.V - 1:
+            if current_weight < min_weight[0]:
+                min_weight[0] = current_weight
+                mst.clear()
+                mst.extend(current_tree)
+            return
+        if index >= len(graph.graph):
+            return
+        # Include current edge
+        backtrack(index + 1, current_tree + [graph.graph[index]], current_weight + graph.graph[index][2])
+        # Exclude current edge
+        backtrack(index + 1, current_tree, current_weight)
+    
+    backtrack(0, [], 0)
+    return mst
+
+# Parameters
+vertices = 6
+edges = 10
+n_list = range(1, 10)  # Number of nodes for different graph sizes
+
+# Measure execution time for Kruskal, Brute Force, and Backtracking
+kruskal_times = []
 bruteforce_times = []
-for n in n_list:
-    weights, values, capacity = generate_random_knapsack_input(n)
-    # Measure Backtracking time
-    backtracking_time = measure_knapsack_time(knapsack_backtracking, weights, values, capacity, n)
-    backtracking_times.append(backtracking_time)
-    # Measure Brute Force time
-    bruteforce_time = measure_knapsack_time(knapsack_bruteforce, weights, values, capacity, n)
-    bruteforce_times.append(bruteforce_time)
+backtracking_times = []
 
-# Plotting the time complexity graph for Backtracking and Brute Force
-plt.figure(figsize=(6, 6))  # Adjusted size for a single plot
-plt.plot(n_list, backtracking_times, marker='o', label='Backtracking')
+for n in n_list:
+    graph = generate_random_graph(n, min(n * 2, (n * (n - 1)) // 2))
+    kruskal_times.append(measure_time(lambda g: g.KruskalMST(), graph))
+    bruteforce_times.append(measure_time(brute_force_mst, graph))
+    backtracking_times.append(measure_time(backtracking_mst, graph))
+
+# Plotting the time complexity graph for Kruskal, Backtracking, and Brute Force
+plt.figure(figsize=(6, 6))
+plt.plot(n_list, kruskal_times, marker='o', label='Kruskal')
 plt.plot(n_list, bruteforce_times, marker='o', label='Brute Force')
-plt.xlabel('Number of Items (n)')
+plt.plot(n_list, backtracking_times, marker='o', label='Backtracking')
+plt.xlabel('Number of Nodes (n)')
 plt.ylabel('Time (seconds)')
-plt.title('Time Complexity Comparison: Backtracking vs Brute Force')
+plt.title('Time Complexity Comparison: Kruskal vs Brute Force vs Backtracking')
 plt.legend()
 plt.grid(True)
-
 plt.show()

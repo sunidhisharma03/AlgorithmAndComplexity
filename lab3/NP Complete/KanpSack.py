@@ -35,29 +35,44 @@ def knapsack_dynamic(weights, values, W):
     
     return dp[n][W]
 
-# Backtracking 0/1 Knapsack solution
+# Optimized Backtracking 0/1 Knapsack solution
 def knapsack_backtracking(weights, values, W):
     n = len(weights)
     max_value = [0]  # Use a list to store the max value as reference
 
+    # Sort items by value-to-weight ratio (heuristic for better pruning)
+    items = sorted(zip(weights, values), key=lambda x: x[1] / x[0], reverse=True)
+    weights, values = zip(*items)
+
     # Recursive function for backtracking
     def backtrack(index, current_weight, current_value):
-        # Update maximum value if within bounds
         if current_weight <= W:
             max_value[0] = max(max_value[0], current_value)
 
-        # Termination condition
         if index == n or current_weight > W:
             return
 
         # Explore including the current item
-        backtrack(index + 1, current_weight + weights[index], current_value + values[index])
+        if current_weight + weights[index] <= W:
+            backtrack(index + 1, current_weight + weights[index], current_value + values[index])
         # Explore excluding the current item
         backtrack(index + 1, current_weight, current_value)
 
-    # Start backtracking
     backtrack(0, 0, 0)
     return max_value[0]
+
+# Greedy Approximation (Fractional Knapsack)
+def knapsack_greedy(weights, values, W):
+    items = sorted(zip(weights, values), key=lambda x: x[1] / x[0], reverse=True)
+    total_value = 0
+    for weight, value in items:
+        if W >= weight:
+            W -= weight
+            total_value += value
+        else:
+            total_value += (W / weight) * value
+            break
+    return total_value
 
 # Function to compare performance of all approaches
 def plot_knapsack_performance():
@@ -66,6 +81,7 @@ def plot_knapsack_performance():
     brute_times = []
     dp_times = []
     backtrack_times = []
+    greedy_times = []
     
     for n in n_values:
         # Randomly generate weights and values for n items
@@ -86,14 +102,20 @@ def plot_knapsack_performance():
         start_time = time.time()
         max_value_backtrack = knapsack_backtracking(weights, values, W)
         backtrack_times.append(time.time() - start_time)
-        
-        print(f"n={n}, Max Value (Brute): {max_value_brute}, Max Value (DP): {max_value_dp}, Max Value (Backtrack): {max_value_backtrack}")
-    
+
+        # Greedy Approximation
+        start_time = time.time()
+        max_value_greedy = knapsack_greedy(weights, values, W)
+        greedy_times.append(time.time() - start_time)
+
+        print(f"n={n}, Max Value (Brute): {max_value_brute}, Max Value (DP): {max_value_dp}, Max Value (Backtrack): {max_value_backtrack}, Max Value (Greedy): {max_value_greedy}")
+
     # Plotting the time complexity
     plt.figure(figsize=(10, 6))
     plt.plot(n_values, brute_times, label="Brute Force Time", marker='o')
     plt.plot(n_values, dp_times, label="Dynamic Programming Time", marker='o')
     plt.plot(n_values, backtrack_times, label="Backtracking Time", marker='o')
+    plt.plot(n_values, greedy_times, label="Greedy Approximation Time", marker='o', linestyle="dashed")
     plt.xlabel("Number of Items (n)")
     plt.ylabel("Time (seconds)")
     plt.title("Performance Comparison of 0/1 Knapsack Problem")

@@ -1,73 +1,85 @@
 import time
 import random
+import networkx as nx
 import matplotlib.pyplot as plt
 
-# Backtracking Approach
-def knapsack_backtracking(weights, values, capacity, n):
-    def backtrack(index, current_weight, current_value):
-        nonlocal max_value
-        if current_weight <= capacity and current_value > max_value:
-            max_value = current_value
-        if index == n or current_weight >= capacity:
-            return
-        # Include the current item
-        backtrack(index + 1, current_weight + weights[index], current_value + values[index])
-        # Exclude the current item
-        backtrack(index + 1, current_weight, current_value)
+# Ford-Fulkerson Algorithm using DFS (Backtracking approach)
+def ford_fulkerson_backtracking(graph, source, sink):
+    def dfs(flow_graph, u, flow, visited):
+        if u == sink:
+            return flow
+        visited.add(u)
+        for v in flow_graph[u]:
+            if v not in visited and flow_graph[u][v] > 0:  # If capacity available
+                min_flow = min(flow, flow_graph[u][v])
+                result = dfs(flow_graph, v, min_flow, visited)
+                if result > 0:
+                    flow_graph[u][v] -= result
+                    flow_graph[v][u] += result
+                    return result
+        return 0
 
-    max_value = 0
-    backtrack(0, 0, 0)
-    return max_value
+    max_flow = 0
+    residual_graph = {u: dict(edges) for u, edges in graph.items()}
+    while True:
+        visited = set()
+        flow = dfs(residual_graph, source, float('inf'), visited)
+        if flow == 0:
+            break
+        max_flow += flow
+    return max_flow
 
-# Brute Force Approach
-def knapsack_bruteforce(weights, values, capacity, n):
-    max_value = 0
-    # Generate all possible subsets
-    for i in range(2**n):
-        total_weight = 0
-        total_value = 0
-        for j in range(n):
-            if (i >> j) & 1:  # Check if the j-th item is included
-                total_weight += weights[j]
-                total_value += values[j]
-        if total_weight <= capacity and total_value > max_value:
-            max_value = total_value
-    return max_value
+# Brute Force approach for Maximum Flow (inefficient)
+def max_flow_bruteforce(graph, source, sink):
+    nodes = list(graph.keys())
+    max_flow = 0
+    for _ in range(1000):  # Randomly test paths (not exhaustive, but slow)
+        random.shuffle(nodes)
+        flow = ford_fulkerson_backtracking(graph, source, sink)
+        max_flow = max(max_flow, flow)
+    return max_flow
 
-# Function to generate random inputs
-def generate_random_input(n):
-    weights = [random.randint(1, 20) for _ in range(n)]
-    values = [random.randint(10, 50) for _ in range(n)]
-    capacity = random.randint(20, 50)
-    return weights, values, capacity
+# Function to generate a random flow network
+def generate_random_flow_network(n):
+    graph = {i: {} for i in range(n)}
+    for i in range(n - 1):
+        for j in range(i + 1, n):
+            if random.random() > 0.5:  # Randomly create edges
+                capacity = random.randint(1, 20)
+                graph[i][j] = capacity
+                graph[j][i] = 0  # Reverse edge with zero initial flow
+    return graph
 
 # Function to measure execution time
-def measure_time(algorithm, weights, values, capacity, n):
+def measure_time(algorithm, graph, source, sink):
     start_time = time.time()
-    algorithm(weights, values, capacity, n)
+    algorithm(graph, source, sink)
     end_time = time.time()
     return end_time - start_time
 
 # Parameters for the time complexity graph
-n_list = range(1, 20)  # Number of items
+n_list = range(5, 20)  # Number of nodes
 backtracking_times = []
 bruteforce_times = []
 
 for n in n_list:
-    weights, values, capacity = generate_random_input(n)
+    graph = generate_random_flow_network(n)
+    source, sink = 0, n - 1
+    
     # Measure Backtracking time
-    backtracking_time = measure_time(knapsack_backtracking, weights, values, capacity, n)
+    backtracking_time = measure_time(ford_fulkerson_backtracking, graph, source, sink)
     backtracking_times.append(backtracking_time)
+    
     # Measure Brute Force time
-    bruteforce_time = measure_time(knapsack_bruteforce, weights, values, capacity, n)
+    bruteforce_time = measure_time(max_flow_bruteforce, graph, source, sink)
     bruteforce_times.append(bruteforce_time)
 
 # Plotting the time complexity graph
-plt.plot(n_list, backtracking_times, marker='o', label='Backtracking')
+plt.plot(n_list, backtracking_times, marker='o', label='Ford-Fulkerson (Backtracking)')
 plt.plot(n_list, bruteforce_times, marker='o', label='Brute Force')
-plt.xlabel('Number of Items (n)')
+plt.xlabel('Number of Nodes (n)')
 plt.ylabel('Time (seconds)')
-plt.title('Time Complexity Comparison: Backtracking vs Brute Force')
+plt.title('Time Complexity Comparison: Ford-Fulkerson vs Brute Force')
 plt.legend()
 plt.grid(True)
 plt.show()
